@@ -8,3 +8,8 @@
 TEST(eq, equal) {
     EXPECT_EQ(1, 1);
 }
+
+
+int main() {
+
+}

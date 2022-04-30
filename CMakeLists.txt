@@ -16,3 +16,4 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/out")
 add_subdirectory(ssvtl)
 add_subdirectory(ssvtl_tests)
 
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
