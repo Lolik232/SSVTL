@@ -5,7 +5,6 @@
 #include "queue.hpp"
 #include "gtest/gtest.h"
 
-int main() {
-    Ssvtl::Queue q;
-    int b = q.create();
+TEST(eq, equal) {
+    EXPECT_EQ(1, 1);
 }
