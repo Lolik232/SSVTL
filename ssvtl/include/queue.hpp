@@ -5,15 +5,12 @@
 #ifndef SSVTL_QUEUE_HPP
 #define SSVTL_QUEUE_HPP
 
-#include <vector>
-#include <list>
-
-#include "type_traits"
-
+#include "list.hpp"
 
 namespace Ssvtl {
 
-    template<typename T, typename Container = std::list<T>>
+    // TODO: replace std::list for our list implementation
+    template<typename T, typename Container = Ssvtl::List<T>>
     class Queue {
     public:
         // для совместимости со стандартной библиотекой
