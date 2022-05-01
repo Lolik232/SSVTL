@@ -7,7 +7,7 @@
 
 #include <algorithm>
 #include <iostream>
-
+#include <initializer_list>
 
 namespace Ssvtl {
 
@@ -16,8 +16,8 @@ namespace Ssvtl {
     public:
         using value_type = T;
 
-        value_type _value;
-        Node<value_type>* _next, * _prev;
+        value_type _value = value_type();
+        Node<value_type> *_next, *_prev;
     };
 
     template<typename Node>
@@ -25,17 +25,17 @@ namespace Ssvtl {
     public:
         using value_type = Node;
         using size_type = size_t;
-        using pointer = value_type*;
+        using pointer = value_type *;
     public:
         explicit ListIterator(pointer ptr)
                 : _ptr(ptr) {}
 
-        ListIterator& operator++() {
+        ListIterator &operator++() {
             _ptr = _ptr->_next;
             return *this;
         }
 
-        ListIterator& operator--() {
+        ListIterator &operator--() {
             _ptr = _ptr->_prev;
             return *this;
         }
@@ -52,21 +52,21 @@ namespace Ssvtl {
             return it;
         }
 
-        ListIterator& operator[](const size_type& offset) {
+        ListIterator &operator[](const size_type &offset) {
             for (size_type i = 0; i < offset; ++i)
                 ++(*this);
             return *this;
         }
 
-        typename Node::value_type& operator*() {
+        typename Node::value_type &operator*() {
             return _ptr->_value;
         }
 
-        bool operator==(const ListIterator& other) const {
+        bool operator==(const ListIterator &other) const {
             return _ptr == other._ptr;
         }
 
-        bool operator!=(const ListIterator& other) const {
+        bool operator!=(const ListIterator &other) const {
             return _ptr != other._ptr;
         }
 
@@ -83,15 +83,15 @@ namespace Ssvtl {
     public:
         using value_type = T;
         using size_type = size_t;
-        using reference = value_type&;
-        using const_reference = const value_type&;
+        using reference = value_type &;
+        using const_reference = const value_type &;
         using node_type = Node<value_type>;
         using iterator = ListIterator<node_type>;
     public:
         List() {
             _size = 0;
-            auto* first = new node_type;
-            auto* last = new node_type;
+            auto *first = new node_type;
+            auto *last = new node_type;
 
             first->_next = last;
             first->_prev = nullptr;
@@ -103,20 +103,34 @@ namespace Ssvtl {
             _tail = last;
         };
 
-        List(size_type size, const value_type& value) {
-            _size = size;
+        explicit List(size_type size) : List() {
+            for (size_type i = 0; i < size; ++i)
+                this->push_back(value_type());
+        }
+
+        List(const List &other) : List() {
+            for (auto it = other.begin(); it != other.end(); ++it)
+                this->push_back(*it);
+        }
+
+        List(size_type size, const value_type &value) : List() {
             for (size_type i = 0; i < size; ++i)
                 this->push_back(value);
+        }
+
+        List(std::initializer_list<value_type> l) : List() {
+            for (auto &elem: l)
+                this->push_back(elem);
         }
 
         iterator begin() { return ++iterator(_head); }
 
         iterator end() { return iterator(_tail); }
 
-        iterator insert(iterator pos, const value_type& value) {
+        iterator insert(iterator pos, const value_type &value) {
             _size++;
 
-            auto* newNode = new node_type;
+            auto *newNode = new node_type;
             newNode->_value = value;
 
             return _insertPointer(pos, newNode);
@@ -137,11 +151,11 @@ namespace Ssvtl {
             return nextIter;
         }
 
-        void push_front(const value_type& value) {
+        void push_front(const value_type &value) {
             insert(this->begin(), value);
         }
 
-        void push_back(const value_type& value) {
+        void push_back(const value_type &value) {
             insert(this->end(), value);
         }
 
@@ -149,7 +163,7 @@ namespace Ssvtl {
 
         void pop_back() { erase(--(this->end())); }
 
-        void resize(size_type count, const value_type& value) {
+        void resize(size_type count, const value_type &value = value_type()) {
             if (_size > count) {
                 auto diff = _size - count;
                 for (size_type i = 0; i < diff; ++i)
@@ -164,41 +178,63 @@ namespace Ssvtl {
         }
 
         void clear() {
-            for (auto it = this->begin(); it != this->end(); ++it)
-                erase(it);
-            _size = 0;
+            if (this->empty())
+                return;
+
+            for (auto it = ++this->begin(); it != this->end(); ++it) {
+                auto prevIter = --it;
+                ++it;
+
+                erase(prevIter);
+            }
+            erase(--(this->end()));
         }
 
-        void swap(List& other) {
+        void swap(List &other) {
             std::swap(*this, other);
         }
 
-        void splice(iterator pos, List& other) {
-            static_assert(
-                    std::is_same_v<T, typename decltype(other)::value_type>,
-                    "this and other template types must be equal!");
+        void splice(iterator pos, List &other) {
+//            static_assert(
+//                    std::is_same_v<T, typename decltype(other)::value_type>,
+//                    "this and other template types must be equal!");
 
-            for (auto it = other.begin(); it != other.end(); ++it) {
-                auto ptr = it.getPointer();
-                _insertPointer(pos++, ptr);
-                _relinkPointer(it);
-            }
+            auto prevIter = --pos;
+            ++pos;
+
+            prevIter.getPointer()->_next = other.begin().getPointer();
+            other.begin().getPointer()->_prev = prevIter.getPointer();
+
+            (--other.end()).getPointer()->_next = pos.getPointer();
+            pos.getPointer()->_prev = (--other.end()).getPointer();
+
+            other._head->_next = other._tail;
+            other._tail->_prev = other._head;
 
             _size += other._size;
             other._size = 0;
         }
 
+        size_type size() { return _size; }
+
+        bool empty() { return _size == 0; }
+
         reference front() { return *begin(); }
 
         reference back() { return *--end(); }
 
+        ~List() {
+            this->clear();
+            delete _head;
+            delete _tail;
+        }
 
     private:
-        node_type* _head;
-        node_type* _tail;
+        node_type *_head;
+        node_type *_tail;
         size_type _size;
 
-        iterator _insertPointer(iterator& pos, node_type* ptr) {
+        iterator _insertPointer(iterator &pos, node_type *ptr) {
             auto prevIter = --pos;
             ++pos;
 
@@ -211,7 +247,7 @@ namespace Ssvtl {
             return iterator(ptr);
         }
 
-        iterator _relinkPointer(iterator& pos) {
+        iterator _relinkPointer(iterator &pos) {
             auto prevIter = --pos;
             ++pos;
 

@@ -17,17 +17,31 @@ int main() {
     q.push(2);
     q.push(4);
 
-    Ssvtl::List<int> list;
-    list.push_back(3);
-    list.push_back(2);
-    list.push_back(4);
+    Ssvtl::List<std::vector<int>> list = {{1, 2},
+                                          {3, 4}};
 
-    for (auto& elem: list) {
-        elem++;
+    Ssvtl::List<std::vector<int>> nl = {{42},
+                                        {1, 2, 3, 4},
+                                        {5}};
+
+    list.splice(++list.begin(), nl);
+
+//    for (auto &elem: list) {
+//        for (auto &x: elem) {
+//            x++;
+//        }
+//    }
+
+    for (auto &elem: list) {
+        for (auto &x: elem) {
+            std::cout << x << ' ';
+        }
     }
 
-    for (auto& elem: list) {
-        std::cout << elem << ' ';
+    for (auto &elem: nl) {
+        for (auto &x: elem) {
+            std::cout << x << ' ';
+        }
     }
 
     return 0;
