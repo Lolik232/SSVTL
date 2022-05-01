@@ -1,10 +1,8 @@
 set(HEADERS
-        ${CMAKE_CURRENT_LIST_DIR}/include/queue.hpp
         ${CMAKE_CURRENT_LIST_DIR}/include/stack.hpp
         )
 
 set (SOURCES
-        ${CMAKE_CURRENT_LIST_DIR}/src/queue.cpp
         ${CMAKE_CURRENT_LIST_DIR}/src/stack.cpp
         )
 
