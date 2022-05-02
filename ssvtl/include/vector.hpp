@@ -22,35 +22,43 @@
  *  capacity
  *  resize
  *  emplace_back
+ *  empty
+ *  reserve
+ *  push_back
  *
  * */
 
 /*  vector methods
  *
- *  empty
  *  max_size
- *  reserve
+ *
  *  shrink_to_fit
  *
  *  clear
  *  insert
  *  emplace
  *  erase
- *  push_back
  *  pop_back - pop_front(additional)
  *
  *  swap
  * */
 
-template<typename Vec>
-class VectorIterator : std::random_access_iterator_tag {
+template<typename T>
+class VectorIterator {
+private:
+    using _alloc = std::allocator<T>;
 public:
-    using value_type = typename Vec::value_type;
-    using pointer = typename Vec::pointer;
-    using reference = typename Vec::reference;
-    using size_type = typename Vec::size_type;
-    using it = VectorIterator<Vec>;
+//    using value_type = T;
+    using difference_type = std::ptrdiff_t;
+    using iterator_category = std::bidirectional_iterator_tag;
+    using value_type = T;
+    using pointer = T*;
+    using reference = T&;
+    using size_type = typename std::allocator_traits<_alloc>::size_type;
+    using it = VectorIterator;
+    using iterator_traits = std::iterator_traits<VectorIterator>;
 
+public:
     explicit VectorIterator(pointer value) {
         m_value = value;
     }
@@ -63,9 +71,12 @@ public:
             m_value(std::move(other.m_value)) {
     }
 
-
     reference operator*() noexcept {
         return *m_value;
+    }
+
+    pointer operator->() noexcept {
+        return m_value;
     }
 
     const VectorIterator& operator++() noexcept {
@@ -121,6 +132,30 @@ public:
         return *this + n;
     }
 
+    bool operator<(const VectorIterator& other) {
+        return m_value < other.m_value;
+    }
+
+    bool operator>(const VectorIterator& other) {
+        return m_value > other.m_value;
+    }
+
+    bool operator==(const VectorIterator& other) {
+        return m_value == other.m_value;
+    }
+
+    bool operator!=(const VectorIterator& other) {
+        return m_value != other.m_value;
+    }
+
+    bool operator>=(const VectorIterator& other) {
+        return m_value >= other.m_value;
+    }
+
+    bool operator<=(const VectorIterator& other) {
+        return m_value <= other.m_value;
+    }
+
 private:
     pointer m_value;
 };
@@ -146,7 +181,7 @@ namespace Ssvtl {
         using size_type = typename _alloc_traits::size_type;
         using difference_type = typename _alloc_traits::difference_type;
 
-        using iterator = VectorIterator<Vector<value_type>>;
+        using iterator = VectorIterator<value_type>;
 
         explicit Vector() = default;
 
@@ -187,15 +222,13 @@ namespace Ssvtl {
         };
 
         reference front() {
-            if (size() == 0)
-                throw std::length_error("vector is empty");
             return *begin();
         }
 
         reference back() {
             if (size() == 0)
-                throw std::length_error("vector is empty");
-            return *(--end());
+                return front();
+            return *(end() - 1);
         }
 
         size_type size() noexcept {
@@ -218,16 +251,14 @@ namespace Ssvtl {
             if (newSize < size()) {
                 iterator startDestroy = begin() + newSize;
                 iterator endDestroy = end();
-//                std::destroy(startDestroy, endDestroy);
+
+                if (std::is_destructible_v<value_type>)
+                    std::destroy(startDestroy, endDestroy);
             }
+
             if (newSize > size()) {
                 if (capacity() < newSize) {
-                    m_data = static_cast<pointer>(
-                            std::realloc(static_cast<void*>(data()),
-                                         sizeof(value_type) * newSize));
-                    if (newSize != 0 && data() == nullptr) {
-                        throw std::bad_alloc();
-                    }
+                    _reallocMem(newSize);
                     m_capacity = newSize;
                 }
             }
@@ -237,18 +268,54 @@ namespace Ssvtl {
 
         template<typename... ValT>
         decltype(auto) emplace_back(ValT&& ... values) {
-            // TODO: push_back
-            resize(size() + 1);
-            reference _val = at(size() - 1);
-            // _val = std::forward<>()
+            if (size() == capacity()) {
+                reserve(size() + 1);
+            }
 
-            _val = value_type(std::forward<ValT>(values)...);
+            *end() = value_type(std::forward<ValT>(values)...);
+            m_size++;
+        }
+
+        [[nodiscard]] bool empty() const noexcept {
+            return size() == 0;
+        }
+
+        void reserve(size_type n) {
+            if (n > capacity()) {
+                _reallocMem(n);
+                m_capacity = n;
+            }
+        }
+
+
+        void push_back(value_type val) {
+            if (size() >= capacity()) {
+                if (size() == 0) {
+                    reserve(1);
+                } else {
+                    reserve(size() * 2);
+                }
+            }
+
+            m_size++;
+            back() = val;
+        }
+
+        void clear() noexcept {
+            if (size() == 0) {
+                return;
+            }
+
+            if (std::is_destructible_v<value_type>) {
+                std::destroy(begin(), end());
+            }
+
+            m_size = 0;
         }
 
         ~Vector() {
             resize(0);
         }
-
 
     private:
         pointer m_data = nullptr;
@@ -274,6 +341,30 @@ namespace Ssvtl {
 
                 throw std::out_of_range(msgs.str());
             }
+        }
+
+        void _reallocMem(const size_type newCapacity) {
+            std::allocator<value_type> alloc;
+
+            pointer newMem = alloc.allocate(newCapacity);
+
+            if (std::is_move_assignable_v<value_type>) {
+                std::move(begin(), end(), iterator(newMem));
+            } else {
+                std::copy(begin(), end(), iterator(newMem));
+            }
+
+            if (m_data != nullptr)
+                alloc.deallocate(m_data, capacity());
+
+//            auto newMem = static_cast<pointer>(
+//                    std::realloc(static_cast<void*>(m_data),
+//                                 sizeof(value_type) * newCapacity));
+//            if (newCapacity != 0 && newMem == nullptr) {
+//                throw std::bad_alloc();
+//            }
+
+            m_data = newMem;
         }
     };
 
