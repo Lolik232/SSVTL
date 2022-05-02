@@ -9,6 +9,7 @@
 #include <memory>
 #include <exception>
 #include <sstream>
+#include <iostream>
 
 /*  done
  *
@@ -242,6 +243,10 @@ namespace Ssvtl {
             // _val = std::forward<>()
 
             _val = value_type(std::forward<ValT>(values)...);
+        }
+
+        ~Vector() {
+            resize(0);
         }
 
 
