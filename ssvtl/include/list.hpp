@@ -30,32 +30,26 @@ namespace Ssvtl {
         explicit ListIterator(pointer ptr)
                 : _ptr(ptr) {}
 
-        ListIterator &operator++() {
+        virtual ListIterator &operator++() {
             _ptr = _ptr->_next;
             return *this;
         }
 
-        ListIterator &operator--() {
+        virtual ListIterator &operator--() {
             _ptr = _ptr->_prev;
             return *this;
         }
 
-        ListIterator operator++(int) {
+        virtual ListIterator operator++(int) {
             ListIterator it = *this;
             ++(*this);
             return it;
         }
 
-        ListIterator operator--(int) {
+        virtual ListIterator operator--(int) {
             ListIterator it = *this;
             --(*this);
             return it;
-        }
-
-        ListIterator &operator[](const size_type &offset) {
-            for (size_type i = 0; i < offset; ++i)
-                ++(*this);
-            return *this;
         }
 
         typename Node::value_type &operator*() {
@@ -78,6 +72,126 @@ namespace Ssvtl {
         pointer _ptr;
     };
 
+    template<typename Node>
+    class ReverseListIterator : ListIterator<Node>{
+    public:
+        using value_type = Node;
+        using size_type = size_t;
+        using pointer = value_type *;
+    public:
+        explicit ReverseListIterator(pointer ptr)
+                : _ptr(ptr) {}
+
+        ReverseListIterator &operator++() {
+            _ptr = _ptr->_prev;
+            return *this;
+        }
+
+        ReverseListIterator &operator--() {
+            _ptr = _ptr->_next;
+            return *this;
+        }
+
+        ReverseListIterator operator++(int) {
+            ListIterator it = *this;
+            --(*this);
+            return it;
+        }
+
+        ReverseListIterator operator--(int) {
+            ListIterator it = *this;
+            ++(*this);
+            return it;
+        }
+
+    private:
+        pointer _ptr;
+    };
+
+    template<typename Node>
+    class ConstListIterator {
+    public:
+        using value_type = Node;
+        using size_type = size_t;
+        using pointer = value_type *;
+    public:
+        explicit ConstListIterator(pointer ptr)
+                : _ptr(ptr) {}
+
+        virtual ConstListIterator &operator++() {
+            _ptr = _ptr->_next;
+            return *this;
+        }
+
+        virtual ConstListIterator &operator--() {
+            _ptr = _ptr->_prev;
+            return *this;
+        }
+
+        virtual ConstListIterator operator++(int) {
+            ListIterator it = *this;
+            ++(*this);
+            return it;
+        }
+
+        virtual ConstListIterator operator--(int) {
+            ListIterator it = *this;
+            --(*this);
+            return it;
+        }
+
+        const typename Node::value_type &operator*() {
+            return _ptr->_value;
+        }
+
+        bool operator==(const ConstListIterator &other) const {
+            return _ptr == other._ptr;
+        }
+
+        bool operator!=(const ConstListIterator &other) const {
+            return _ptr != other._ptr;
+        }
+
+    private:
+        pointer _ptr;
+    };
+
+    template<typename Node>
+    class ConstReverseListIterator : ConstListIterator<Node>{
+    public:
+        using value_type = Node;
+        using size_type = size_t;
+        using pointer = value_type *;
+    public:
+        explicit ConstReverseListIterator(pointer ptr)
+                : _ptr(ptr) {}
+
+        ConstReverseListIterator &operator++() {
+            _ptr = _ptr->_prev;
+            return *this;
+        }
+
+        ConstReverseListIterator &operator--() {
+            _ptr = _ptr->_next;
+            return *this;
+        }
+
+        ConstReverseListIterator operator++(int) {
+            ListIterator it = *this;
+            --(*this);
+            return it;
+        }
+
+        ConstReverseListIterator operator--(int) {
+            ListIterator it = *this;
+            ++(*this);
+            return it;
+        }
+
+    private:
+        pointer _ptr;
+    };
+
     template<class T>
     class List {
     public:
@@ -87,6 +201,9 @@ namespace Ssvtl {
         using const_reference = const value_type &;
         using node_type = Node<value_type>;
         using iterator = ListIterator<node_type>;
+        using const_iterator = ConstListIterator<node_type>;
+        using reverse_iterator = ReverseListIterator<node_type>;
+        using const_reverse_iterator = ConstReverseListIterator<node_type>;
     public:
         List() {
             _size = 0;
@@ -109,8 +226,7 @@ namespace Ssvtl {
         }
 
         List(const List &other) : List() {
-            for (auto it = other.begin(); it != other.end(); ++it)
-                this->push_back(*it);
+            _constructFromList(other);
         }
 
         List(size_type size, const value_type &value) : List() {
@@ -123,9 +239,29 @@ namespace Ssvtl {
                 this->push_back(elem);
         }
 
-        iterator begin() { return ++iterator(_head); }
+        iterator begin() noexcept { return ++iterator(_head); }
+
+        const_iterator begin() const noexcept { return ++const_iterator(_head); }
 
         iterator end() { return iterator(_tail); }
+
+        const_iterator end() const noexcept { return const_iterator(_tail); }
+
+        const_iterator cbegin() const noexcept { return ++const_iterator(_head); }
+
+        const_iterator cend() const noexcept { return const_iterator(_tail); }
+
+        reverse_iterator rbegin() noexcept { return ++reverse_iterator(_tail); }
+
+        const_reverse_iterator rbegin() const noexcept { return ++const_reverse_iterator(_tail); }
+
+        reverse_iterator rend() noexcept { return reverse_iterator(_head); }
+
+        const_reverse_iterator rend() const noexcept { return const_reverse_iterator(_head); }
+
+        const_reverse_iterator crbegin() const noexcept { return ++const_reverse_iterator(_tail); }
+
+        const_reverse_iterator crend() const noexcept { return reverse_iterator(_head); }
 
         iterator insert(iterator pos, const value_type &value) {
             _size++;
@@ -191,14 +327,12 @@ namespace Ssvtl {
         }
 
         void swap(List &other) {
-            std::swap(*this, other);
+            auto t = *this;
+            *this = other;
+            other = t;
         }
 
         void splice(iterator pos, List &other) {
-//            static_assert(
-//                    std::is_same_v<T, typename decltype(other)::value_type>,
-//                    "this and other template types must be equal!");
-
             auto prevIter = --pos;
             ++pos;
 
@@ -215,13 +349,32 @@ namespace Ssvtl {
             other._size = 0;
         }
 
-        size_type size() { return _size; }
+        void reverse() {
+            auto i = begin(), j = --end();
 
-        bool empty() { return _size == 0; }
+            auto n = _size / 2;
+            for (size_type k = 0; k < n; ++k) {
+                std::swap(i.getPointer()->_value, j.getPointer()->_value);
+                ++i, --j;
+            }
+        }
 
-        reference front() { return *begin(); }
+        size_type size() const noexcept { return _size; }
 
-        reference back() { return *--end(); }
+        [[nodiscard]] bool empty() const noexcept { return _size == 0; }
+
+        reference front() const { return *begin(); }
+
+        reference back() const { return *--end(); }
+
+        List &operator=(const List &other) {
+            if (this == &other)
+                return *this;
+
+            this->clear();
+            this->_constructFromList(other);
+            return *this;
+        }
 
         ~List() {
             this->clear();
@@ -258,6 +411,11 @@ namespace Ssvtl {
             nextIter.getPointer()->_prev = prevIter.getPointer();
 
             return nextIter;
+        }
+
+        void _constructFromList(const List &other) {
+            for (auto it = other.begin(); it != other.end(); ++it)
+                this->push_back(*it);
         }
     };
 

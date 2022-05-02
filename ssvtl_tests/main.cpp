@@ -17,31 +17,18 @@ int main() {
     q.push(2);
     q.push(4);
 
-    Ssvtl::List<std::vector<int>> list = {{1, 2},
-                                          {3, 4}};
+    Ssvtl::List<int> list = {1, 2};
 
-    Ssvtl::List<std::vector<int>> nl = {{42},
-                                        {1, 2, 3, 4},
-                                        {5}};
+    Ssvtl::List<int> nl = {421, 2, 3, 5};
 
-    list.splice(++list.begin(), nl);
-
-//    for (auto &elem: list) {
-//        for (auto &x: elem) {
-//            x++;
-//        }
-//    }
+    nl.reverse();
 
     for (auto &elem: list) {
-        for (auto &x: elem) {
-            std::cout << x << ' ';
-        }
+        std::cout << elem << ' ';
     }
 
     for (auto &elem: nl) {
-        for (auto &x: elem) {
-            std::cout << x << ' ';
-        }
+        std::cout << elem << ' ';
     }
 
     return 0;
