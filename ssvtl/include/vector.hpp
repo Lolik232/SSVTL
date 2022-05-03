@@ -236,7 +236,7 @@ namespace Ssvtl {
             return *(end() - 1);
         }
 
-        size_type size() noexcept {
+        size_type size() const noexcept {
             return m_size;
         }
 
