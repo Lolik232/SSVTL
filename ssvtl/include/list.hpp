@@ -21,11 +21,15 @@ namespace Ssvtl {
     };
 
     template<typename Node>
-    class ListIterator {
+    class ListIterator : std::bidirectional_iterator_tag {
     public:
         using value_type = Node;
         using size_type = size_t;
         using pointer = value_type *;
+        using reference = value_type &;
+        using difference_type = ptrdiff_t;
+        using iterator_category = std::bidirectional_iterator_tag;
+        using iterator_traits = std::iterator_traits<ListIterator>;
     public:
         explicit ListIterator(pointer ptr)
                 : _ptr(ptr) {}
@@ -56,6 +60,10 @@ namespace Ssvtl {
             return _ptr->_value;
         }
 
+        pointer operator->() {
+            return _ptr;
+        }
+
         bool operator==(const ListIterator &other) const {
             return _ptr == other._ptr;
         }
@@ -73,11 +81,15 @@ namespace Ssvtl {
     };
 
     template<typename Node>
-    class ReverseListIterator : ListIterator<Node>{
+    class ReverseListIterator : ListIterator<Node> {
     public:
         using value_type = Node;
         using size_type = size_t;
         using pointer = value_type *;
+        using reference = value_type &;
+        using difference_type = ptrdiff_t;
+        using iterator_category = std::bidirectional_iterator_tag;
+        using iterator_traits = std::iterator_traits<ReverseListIterator>;
     public:
         explicit ReverseListIterator(pointer ptr)
                 : _ptr(ptr) {}
@@ -93,13 +105,13 @@ namespace Ssvtl {
         }
 
         ReverseListIterator operator++(int) {
-            ListIterator it = *this;
+            ReverseListIterator it = *this;
             --(*this);
             return it;
         }
 
         ReverseListIterator operator--(int) {
-            ListIterator it = *this;
+            ReverseListIterator it = *this;
             ++(*this);
             return it;
         }
@@ -109,11 +121,15 @@ namespace Ssvtl {
     };
 
     template<typename Node>
-    class ConstListIterator {
+    class ConstListIterator : std::bidirectional_iterator_tag {
     public:
         using value_type = Node;
         using size_type = size_t;
         using pointer = value_type *;
+        using reference = value_type &;
+        using difference_type = ptrdiff_t;
+        using iterator_category = std::bidirectional_iterator_tag;
+        using iterator_traits = std::iterator_traits<ConstListIterator>;
     public:
         explicit ConstListIterator(pointer ptr)
                 : _ptr(ptr) {}
@@ -129,13 +145,13 @@ namespace Ssvtl {
         }
 
         virtual ConstListIterator operator++(int) {
-            ListIterator it = *this;
+            ConstListIterator it = *this;
             ++(*this);
             return it;
         }
 
         virtual ConstListIterator operator--(int) {
-            ListIterator it = *this;
+            ConstListIterator it = *this;
             --(*this);
             return it;
         }
@@ -157,11 +173,15 @@ namespace Ssvtl {
     };
 
     template<typename Node>
-    class ConstReverseListIterator : ConstListIterator<Node>{
+    class ConstReverseListIterator : ConstListIterator<Node> {
     public:
         using value_type = Node;
         using size_type = size_t;
         using pointer = value_type *;
+        using reference = value_type &;
+        using difference_type = ptrdiff_t;
+        using iterator_category = std::bidirectional_iterator_tag;
+        using iterator_traits = std::iterator_traits<ConstReverseListIterator>;
     public:
         explicit ConstReverseListIterator(pointer ptr)
                 : _ptr(ptr) {}
@@ -177,13 +197,13 @@ namespace Ssvtl {
         }
 
         ConstReverseListIterator operator++(int) {
-            ListIterator it = *this;
+            ConstReverseListIterator it = *this;
             --(*this);
             return it;
         }
 
         ConstReverseListIterator operator--(int) {
-            ListIterator it = *this;
+            ConstReverseListIterator it = *this;
             ++(*this);
             return it;
         }
@@ -336,11 +356,11 @@ namespace Ssvtl {
             auto prevIter = --pos;
             ++pos;
 
-            prevIter.getPointer()->_next = other.begin().getPointer();
-            other.begin().getPointer()->_prev = prevIter.getPointer();
+            prevIter->_next = other.begin().getPointer();
+            other.begin()->_prev = prevIter.getPointer();
 
-            (--other.end()).getPointer()->_next = pos.getPointer();
-            pos.getPointer()->_prev = (--other.end()).getPointer();
+            (--other.end())->_next = pos.getPointer();
+            pos->_prev = (--other.end()).getPointer();
 
             other._head->_next = other._tail;
             other._tail->_prev = other._head;
@@ -354,9 +374,42 @@ namespace Ssvtl {
 
             auto n = _size / 2;
             for (size_type k = 0; k < n; ++k) {
-                std::swap(i.getPointer()->_value, j.getPointer()->_value);
+                std::swap(i->_value, j->_value);
                 ++i, --j;
             }
+        }
+
+        size_type remove(const value_type &value) {
+            size_type deleted = 0;
+
+            for (auto it = ++this->begin(); it != this->end(); ++it) {
+                auto prevIter = --it;
+                ++it;
+
+                if (*prevIter == value && ++deleted)
+                    erase(prevIter);
+            }
+            if (*--this->end() == value)
+                erase(--this->end());
+
+            return deleted;
+        }
+
+        template<class UnaryPredicate>
+        size_type remove_if(UnaryPredicate p) {
+            size_type deleted = 0;
+
+            for (auto it = ++this->begin(); it != this->end(); ++it) {
+                auto prevIter = --it;
+                ++it;
+
+                if (p(*prevIter) && ++deleted)
+                    erase(prevIter);
+            }
+            if (p(*--this->end()))
+                erase(--this->end());
+
+            return deleted;
         }
 
         size_type size() const noexcept { return _size; }
@@ -391,8 +444,8 @@ namespace Ssvtl {
             auto prevIter = --pos;
             ++pos;
 
-            prevIter.getPointer()->_next = ptr;
-            pos.getPointer()->_prev = ptr;
+            prevIter->_next = ptr;
+            pos->_prev = ptr;
 
             ptr->_prev = prevIter.getPointer();
             ptr->_next = pos.getPointer();
@@ -407,8 +460,8 @@ namespace Ssvtl {
             auto nextIter = ++pos;
             --pos;
 
-            prevIter.getPointer()->_next = nextIter.getPointer();
-            nextIter.getPointer()->_prev = prevIter.getPointer();
+            prevIter->_next = nextIter.getPointer();
+            nextIter->_prev = prevIter.getPointer();
 
             return nextIter;
         }
