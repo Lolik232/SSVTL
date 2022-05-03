@@ -26,6 +26,7 @@
  *  reserve
  *  push_back
  *  clear
+ *  pop_back - pop_front(additional)
  *
  * */
 
@@ -38,7 +39,7 @@
  *  insert
  *  emplace
  *  erase
- *  pop_back - pop_front(additional)
+ *
  *
  *  swap
  * */
@@ -51,7 +52,7 @@ public:
     using value_type = T;
     using pointer = T*;
     using reference = T&;
-    using difference_type = typename std::allocator_traits<_alloc>::difference_type;
+    using difference_type = typename std::allocator_traits<pointer>::difference_type;
     using iterator_category = std::random_access_iterator_tag;
     using size_type = typename std::allocator_traits<_alloc>::size_type;
 
