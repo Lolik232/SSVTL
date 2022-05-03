@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <iostream>
 #include <initializer_list>
+#include <memory>
 
 namespace Ssvtl {
 
@@ -212,11 +213,13 @@ namespace Ssvtl {
         pointer _ptr;
     };
 
-    template<class T>
+    template<class T, class Allocator = std::allocator<Node<T>>>
     class List {
     public:
         using value_type = T;
         using size_type = size_t;
+        using pointer = typename std::allocator_traits<Allocator>::pointer;
+        using const_pointer = typename std::allocator_traits<Allocator>::const_pointer;
         using reference = value_type &;
         using const_reference = const value_type &;
         using node_type = Node<value_type>;
@@ -226,9 +229,11 @@ namespace Ssvtl {
         using const_reverse_iterator = ConstReverseListIterator<node_type>;
     public:
         List() {
+            std::allocator<node_type> alloc;
+
             _size = 0;
-            auto *first = new node_type;
-            auto *last = new node_type;
+            pointer first = alloc.allocate(1);
+            pointer last = alloc.allocate(1);
 
             first->_next = last;
             first->_prev = nullptr;
@@ -284,15 +289,19 @@ namespace Ssvtl {
         const_reverse_iterator crend() const noexcept { return reverse_iterator(_head); }
 
         iterator insert(iterator pos, const value_type &value) {
+            std::allocator<node_type> alloc;
+
             _size++;
 
-            auto *newNode = new node_type;
+            pointer newNode = alloc.allocate(1);
             newNode->_value = value;
 
             return _insertPointer(pos, newNode);
         }
 
         iterator erase(iterator pos) {
+            std::allocator<node_type> alloc;
+
             if (pos == this->end() ||
                 pos == --(this->begin())
                     )
@@ -302,7 +311,7 @@ namespace Ssvtl {
 
             auto nextIter = _relinkPointer(pos);
 
-            delete pos.getPointer();
+            alloc.deallocate(pos.getPointer(), 1);
 
             return nextIter;
         }
@@ -434,9 +443,11 @@ namespace Ssvtl {
         }
 
         ~List() {
+            std::allocator<node_type> alloc;
+
             this->clear();
-            delete _head;
-            delete _tail;
+            alloc.deallocate(_head, 1);
+            alloc.deallocate(_tail, 1);
         }
 
     private:
