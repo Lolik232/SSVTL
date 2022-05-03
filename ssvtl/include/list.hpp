@@ -94,23 +94,23 @@ namespace Ssvtl {
         explicit ReverseListIterator(pointer ptr)
                 : _ptr(ptr) {}
 
-        ReverseListIterator &operator++() {
+        ReverseListIterator &operator++() override {
             _ptr = _ptr->_prev;
             return *this;
         }
 
-        ReverseListIterator &operator--() {
+        ReverseListIterator &operator--() override {
             _ptr = _ptr->_next;
             return *this;
         }
 
-        ReverseListIterator operator++(int) {
+        ReverseListIterator operator++(int) override {
             ReverseListIterator it = *this;
             --(*this);
             return it;
         }
 
-        ReverseListIterator operator--(int) {
+        ReverseListIterator operator--(int) override {
             ReverseListIterator it = *this;
             ++(*this);
             return it;
@@ -186,23 +186,23 @@ namespace Ssvtl {
         explicit ConstReverseListIterator(pointer ptr)
                 : _ptr(ptr) {}
 
-        ConstReverseListIterator &operator++() {
+        ConstReverseListIterator &operator++() override {
             _ptr = _ptr->_prev;
             return *this;
         }
 
-        ConstReverseListIterator &operator--() {
+        ConstReverseListIterator &operator--() override {
             _ptr = _ptr->_next;
             return *this;
         }
 
-        ConstReverseListIterator operator++(int) {
+        ConstReverseListIterator operator++(int) override {
             ConstReverseListIterator it = *this;
             --(*this);
             return it;
         }
 
-        ConstReverseListIterator operator--(int) {
+        ConstReverseListIterator operator--(int) override {
             ConstReverseListIterator it = *this;
             ++(*this);
             return it;
