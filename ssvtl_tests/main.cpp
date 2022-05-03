@@ -29,13 +29,20 @@ int main() {
     q.push(2);
     q.push(4);
 
-    Ssvtl::List<int> list = {1, 2};
+    Ssvtl::List<int> list = {1, 3, 5, 6, 7};
 
-    Ssvtl::List<int> nl = {422, 2, 3, 5};
+    Ssvtl::List<int> nl = {1, 1, 2, 2, 1};
 
-    list.splice(list.begin(), nl);
+    list.sort();
+    nl.sort();
 
-    list.remove_if(isPrime);
+    list.merge(nl);
+
+    auto it = list.begin();
+
+    auto itt = std::next(it, 2);
+
+    std::cout << *itt << ' ' << *it << '\n';
 
     for (auto &elem: list) {
         std::cout << elem << ' ';

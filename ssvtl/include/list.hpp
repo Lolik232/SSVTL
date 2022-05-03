@@ -65,6 +65,15 @@ namespace Ssvtl {
             return _ptr;
         }
 
+        ListIterator &operator=(const ListIterator &other) {
+            if (this == &other)
+                return *this;
+
+            this->_ptr = other._ptr;
+
+            return *this;
+        }
+
         bool operator==(const ListIterator &other) const {
             return _ptr == other._ptr;
         }
@@ -159,6 +168,15 @@ namespace Ssvtl {
 
         const typename Node::value_type &operator*() {
             return _ptr->_value;
+        }
+
+        ConstListIterator &operator=(const ConstListIterator &other) {
+            if (this == &other)
+                return *this;
+
+            this->_ptr = other._ptr;
+
+            return *this;
         }
 
         bool operator==(const ConstListIterator &other) const {
@@ -328,7 +346,8 @@ namespace Ssvtl {
 
         void pop_back() { erase(--(this->end())); }
 
-        void resize(size_type count, const value_type &value = value_type()) {
+        void resize(size_type count,
+                    const value_type &value = value_type()) {
             if (_size > count) {
                 auto diff = _size - count;
                 for (size_type i = 0; i < diff; ++i)
@@ -362,6 +381,9 @@ namespace Ssvtl {
         }
 
         void splice(iterator pos, List &other) {
+            if (other.empty())
+                return;
+
             auto prevIter = --pos;
             ++pos;
 
@@ -389,6 +411,9 @@ namespace Ssvtl {
         }
 
         size_type remove(const value_type &value) {
+            if (this->empty())
+                return 0;
+
             size_type deleted = 0;
 
             for (auto it = ++this->begin(); it != this->end(); ++it) {
@@ -406,6 +431,9 @@ namespace Ssvtl {
 
         template<class UnaryPredicate>
         size_type remove_if(UnaryPredicate p) {
+            if (this->empty())
+                return 0;
+
             size_type deleted = 0;
 
             for (auto it = ++this->begin(); it != this->end(); ++it) {
@@ -419,6 +447,101 @@ namespace Ssvtl {
                 erase(--this->end());
 
             return deleted;
+        }
+
+        size_type unique() {
+            if (this->empty())
+                return 0;
+
+            size_type deleted = 0;
+
+            for (auto it = ++this->begin(); it != this->end(); ++it) {
+                auto prevIter = --it;
+                ++it;
+
+                if (*prevIter == *it && ++deleted) {
+                    erase(it);
+                    it = prevIter;
+                }
+            }
+
+            return deleted;
+        }
+
+        template<class BinaryPredicate>
+        size_type unique(BinaryPredicate p) {
+            if (this->empty())
+                return 0;
+
+            size_type deleted = 0;
+
+            for (auto it = ++this->begin(); it != this->end(); ++it) {
+                auto prevIter = --it;
+                ++it;
+
+                if (p(*prevIter, *it) && ++deleted) {
+                    erase(it);
+                    it = prevIter;
+                }
+            }
+
+            return deleted;
+        }
+
+        void merge(List &other) {
+            auto itThis = this->begin();
+            auto itOther = other.begin();
+            auto thisEnd = this->end();
+            auto otherEnd = other.end();
+
+            while (itThis != thisEnd && itOther != otherEnd) {
+                if (*itThis == *itOther) {
+                    auto copyIt = _relinkPointer(itOther);
+                    _insertPointer(++itThis, itOther.getPointer());
+                    itOther = copyIt;
+                } else if (*itThis > *itOther) {
+                    auto copyIt = _relinkPointer(itOther);
+                    _insertPointer(itThis, itOther.getPointer());
+                    itOther = copyIt;
+                } else
+                    ++itThis;
+            }
+            while (itOther != otherEnd) {
+                auto copyIt = _relinkPointer(itOther);
+                _insertPointer(thisEnd, itOther.getPointer());
+                itOther = copyIt;
+            }
+
+            other._size = 0;
+        }
+
+        void sort() {
+            std::vector<value_type> v;
+            for (const auto &x: *this)
+                v.push_back(x);
+
+            std::sort(v.begin(), v.end());
+
+            auto it = this->begin();
+            for (const auto &x: v) {
+                it->_value = x;
+                ++it;
+            }
+        }
+
+        template<class Compare>
+        void sort(Compare comp) {
+            std::vector<value_type> v;
+            for (const auto &x: *this)
+                v.push_back(x);
+
+            std::sort(v.begin(), v.end(), comp);
+
+            auto it = this->begin();
+            for (const auto &x: v) {
+                it->_value = x;
+                ++it;
+            }
         }
 
         size_type size() const noexcept { return _size; }
