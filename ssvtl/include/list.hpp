@@ -416,9 +416,13 @@ namespace Ssvtl {
 
         [[nodiscard]] bool empty() const noexcept { return _size == 0; }
 
-        reference front() const { return *begin(); }
+        reference front() noexcept { return *begin(); }
 
-        reference back() const { return *--end(); }
+        const_reference front() const noexcept { return *begin(); }
+
+        reference back() noexcept { return *--end(); }
+
+        const_reference back() const noexcept { return *--end(); }
 
         List &operator=(const List &other) {
             if (this == &other)
