@@ -25,6 +25,7 @@
  *  empty
  *  reserve
  *  push_back
+ *  clear
  *
  * */
 
@@ -34,7 +35,6 @@
  *
  *  shrink_to_fit
  *
- *  clear
  *  insert
  *  emplace
  *  erase
@@ -44,19 +44,19 @@
  * */
 
 template<typename T>
-class VectorIterator {
+class VectorIterator : std::iterator<std::random_access_iterator_tag, T> {
 private:
     using _alloc = std::allocator<T>;
 public:
-//    using value_type = T;
-    using difference_type = std::ptrdiff_t;
-    using iterator_category = std::bidirectional_iterator_tag;
     using value_type = T;
     using pointer = T*;
     using reference = T&;
+    using difference_type = typename std::allocator_traits<_alloc>::difference_type;
+    using iterator_category = std::random_access_iterator_tag;
     using size_type = typename std::allocator_traits<_alloc>::size_type;
+
     using it = VectorIterator;
-    using iterator_traits = std::iterator_traits<VectorIterator>;
+    using iterator_traits = std::iterator_traits<it>;
 
 public:
     explicit VectorIterator(pointer value) {
@@ -106,12 +106,12 @@ public:
         return *this;
     }
 
-    VectorIterator operator+=(const size_type n) noexcept {
+    VectorIterator& operator+=(const size_type n) noexcept {
         m_value += n;
         return *this;
     }
 
-    VectorIterator operator-=(const size_type n) noexcept {
+    VectorIterator& operator-=(const size_type n) noexcept {
         m_value -= n;
         return *this;
     }
@@ -128,31 +128,35 @@ public:
         return tmp;
     }
 
+    size_type operator-(const VectorIterator<T> other) noexcept {
+        return m_value - other.m_value;
+    }
+
     VectorIterator operator[](size_type n) noexcept {
         return *this + n;
     }
 
-    bool operator<(const VectorIterator& other) {
+    bool operator<(VectorIterator& other) {
         return m_value < other.m_value;
     }
 
-    bool operator>(const VectorIterator& other) {
+    bool operator>(VectorIterator& other) {
         return m_value > other.m_value;
     }
 
-    bool operator==(const VectorIterator& other) {
+    bool operator==(VectorIterator& other) {
         return m_value == other.m_value;
     }
 
-    bool operator!=(const VectorIterator& other) {
+    bool operator!=(VectorIterator& other) {
         return m_value != other.m_value;
     }
 
-    bool operator>=(const VectorIterator& other) {
+    bool operator>=(VectorIterator& other) {
         return m_value >= other.m_value;
     }
 
-    bool operator<=(const VectorIterator& other) {
+    bool operator<=(VectorIterator& other) {
         return m_value <= other.m_value;
     }
 
@@ -195,16 +199,16 @@ namespace Ssvtl {
             _assignRange(list.begin(), list.end());
         }
 
-        Vector(Vector& other) noexcept
-                : m_data(std::copy(other.m_data)),
-                  m_size(std::copy(other.m_size)),
-                  m_capacity(std::copy(other.m_capacity)) {
+        Vector(Vector& other) noexcept {
+            reserve(other.capacity());
+            resize(other.size());
+            std::copy(other.begin(), other.end(), begin());
         }
 
         Vector(Vector&& other) noexcept
-                : m_data(std::copy(other.m_data)),
-                  m_size(std::copy(other.m_size)),
-                  m_capacity(std::copy(other.m_capacity)) {
+                : m_data(std::move(other.m_data)),
+                  m_size(std::move(other.m_size)),
+                  m_capacity(std::move(other.m_capacity)) {
         }
 
         pointer data() noexcept {
@@ -259,7 +263,6 @@ namespace Ssvtl {
             if (newSize > size()) {
                 if (capacity() < newSize) {
                     _reallocMem(newSize);
-                    m_capacity = newSize;
                 }
             }
 
@@ -269,11 +272,11 @@ namespace Ssvtl {
         template<typename... ValT>
         decltype(auto) emplace_back(ValT&& ... values) {
             if (size() == capacity()) {
-                reserve(size() + 1);
+                _addMem();
             }
 
-            *end() = value_type(std::forward<ValT>(values)...);
             m_size++;
+            *back() = value_type(std::forward<ValT>(values)...);
         }
 
         [[nodiscard]] bool empty() const noexcept {
@@ -283,18 +286,12 @@ namespace Ssvtl {
         void reserve(size_type n) {
             if (n > capacity()) {
                 _reallocMem(n);
-                m_capacity = n;
             }
         }
 
-
         void push_back(value_type val) {
             if (size() >= capacity()) {
-                if (size() == 0) {
-                    reserve(1);
-                } else {
-                    reserve(size() * 2);
-                }
+                _addMem();
             }
 
             m_size++;
@@ -306,11 +303,23 @@ namespace Ssvtl {
                 return;
             }
 
-            if (std::is_destructible_v<value_type>) {
-                std::destroy(begin(), end());
-            }
-
+            _destroyRange(begin(), end());
             m_size = 0;
+        }
+
+        void pop_back() {
+            _destroy(end() - 1);
+            m_size--;
+        }
+
+        void pop_front() {
+            _destroy(begin());
+            if (std::is_move_assignable_v<value_type>) {
+                std::move(begin() + 1, end(), iterator(begin()));
+            } else {
+                std::copy(begin() + 1, end(), iterator(begin()));
+            }
+            m_size--;
         }
 
         ~Vector() {
@@ -335,8 +344,10 @@ namespace Ssvtl {
         void _outOfRangeCheck(size_type index) {
             if (index >= size()) {
                 std::stringstream msgs;
-                msgs << "vector" << "vector::_outOfRangeCheck"
-                     << "\n" << index << ">= " << "vector.size()" << " is "
+                msgs << "vector::_outOfRangeCheck"
+                     << '\n' << '\t' << "index is " << index << " >= "
+                     << "vector.size()"
+                     << " is "
                      << size();
 
                 throw std::out_of_range(msgs.str());
@@ -346,17 +357,26 @@ namespace Ssvtl {
         void _reallocMem(const size_type newCapacity) {
             std::allocator<value_type> alloc;
 
-            pointer newMem = alloc.allocate(newCapacity);
+            pointer newMem;
 
-            if (std::is_move_assignable_v<value_type>) {
-                std::move(begin(), end(), iterator(newMem));
+            if (newCapacity != 0) {
+                newMem = alloc.allocate(newCapacity);
+                if (newMem == nullptr)
+                    throw std::bad_alloc();
+
+                if (std::is_move_assignable_v<value_type>) {
+                    std::move(begin(), end(), iterator(newMem));
+                } else {
+                    std::copy(begin(), end(), iterator(newMem));
+                }
             } else {
-                std::copy(begin(), end(), iterator(newMem));
+                newMem = nullptr;
             }
 
-            if (m_data != nullptr)
+            if (m_data != nullptr) {
+                _destroyRange(begin(), end());
                 alloc.deallocate(m_data, capacity());
-
+            }
 //            auto newMem = static_cast<pointer>(
 //                    std::realloc(static_cast<void*>(m_data),
 //                                 sizeof(value_type) * newCapacity));
@@ -365,10 +385,26 @@ namespace Ssvtl {
 //            }
 
             m_data = newMem;
+            m_capacity = newCapacity;
+        }
+
+        void _addMem() {
+            size_type newCapacity = size() == 0 ? 1 : size() * 2;
+            _reallocMem(newCapacity);
+        }
+
+        void _destroy(iterator pos) {
+            _destroyRange(pos, pos + 1);
+        }
+
+        void _destroyRange(iterator first, iterator end) {
+            if (std::is_destructible_v<value_type> == false)
+                return;
+//            _alloc_traits::destroy()
+
+            std::destroy(first, end);
         }
     };
-
-
 }
 
 #endif //SSVTL_VECTOR_HPP
