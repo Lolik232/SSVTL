@@ -5,6 +5,7 @@
 #ifndef SSVTL_LIST_H
 #define SSVTL_LIST_H
 
+#include "vector.hpp"
 #include <algorithm>
 #include <iostream>
 #include <initializer_list>
@@ -516,7 +517,7 @@ namespace Ssvtl {
         }
 
         void sort() {
-            std::vector<value_type> v;
+            Vector<value_type> v;
             for (const auto &x: *this)
                 v.push_back(x);
 
@@ -531,7 +532,7 @@ namespace Ssvtl {
 
         template<class Compare>
         void sort(Compare comp) {
-            std::vector<value_type> v;
+            Vector<value_type> v;
             for (const auto &x: *this)
                 v.push_back(x);
 
@@ -609,8 +610,6 @@ namespace Ssvtl {
                 this->push_back(*it);
         }
     };
-
-
 }
 
 #endif //SSVTL_LIST_H
