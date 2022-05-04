@@ -1,12 +1,10 @@
 set(HEADERS
-        ${CMAKE_CURRENT_LIST_DIR}/include/queue.hpp
         ${CMAKE_CURRENT_LIST_DIR}/include/stack.hpp
         ${CMAKE_CURRENT_LIST_DIR}/include/list.hpp
         ${CMAKE_CURRENT_LIST_DIR}/include/vector.hpp
         )
 
 set (SOURCES
-        ${CMAKE_CURRENT_LIST_DIR}/src/queue.cpp
         ${CMAKE_CURRENT_LIST_DIR}/src/stack.cpp
         ${CMAKE_CURRENT_LIST_DIR}/src/list.cpp
         ${CMAKE_CURRENT_LIST_DIR}/src/vector.cpp
